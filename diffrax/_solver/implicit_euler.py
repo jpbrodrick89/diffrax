@@ -7,9 +7,10 @@ from equinox.internal import ω
 from .._custom_types import Args, BoolScalarLike, DenseInfo, RealScalarLike, VF, Y
 from .._heuristics import is_sde
 from .._local_interpolation import LocalLinearInterpolation
+from .._misc import _derive_residual_tags
 from .._root_finder import with_stepsize_controller_tols
 from .._solution import RESULTS
-from .._term import AbstractTerm
+from .._term import AbstractTerm, WrapTerm
 from .base import AbstractAdaptiveSolver, AbstractImplicitSolver
 
 
@@ -80,6 +81,10 @@ class ImplicitEuler(AbstractImplicitSolver, AbstractAdaptiveSolver):
         # (C.f. `AbstractRungeKutta.step`.)
         # If we wanted FSAL then really the correct thing to do would just be to
         # write out a `ButcherTableau` and use `AbstractSDIRK`.
+        _inner = terms.term if isinstance(terms, WrapTerm) else terms
+        residual_tags = _derive_residual_tags(
+            getattr(_inner, "tags", frozenset()), negate_J=False
+        )
         k0 = terms.vf_prod(t0, y0, args, control)
         args = (terms.vf_prod, t1, y0, args, control)
         nonlinear_sol = optx.root_find(
@@ -89,6 +94,7 @@ class ImplicitEuler(AbstractImplicitSolver, AbstractAdaptiveSolver):
             args,
             throw=False,
             max_steps=self.root_find_max_steps,
+            tags=residual_tags,
         )
         k1 = nonlinear_sol.value
         y1 = (y0**ω + k1**ω).ω

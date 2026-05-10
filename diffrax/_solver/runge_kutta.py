@@ -39,6 +39,7 @@ from .._custom_types import (
     VF,
     Y,
 )
+from .._misc import _derive_residual_tags
 from .._solution import is_okay, RESULTS, update_result
 from .._term import AbstractTerm, MultiTerm, ODETerm, WrapTerm
 from .base import AbstractAdaptiveSolver, AbstractImplicitSolver, vector_tree_dot
@@ -531,6 +532,15 @@ class AbstractRungeKutta(AbstractAdaptiveSolver[_SolverState]):
             tableaus
         )
 
+        # Derive residual Jacobian tags from ODETerm.tags (DIRK: residual = I - c·J)
+        if implicit_term is not None:
+            _inner = implicit_term.term if isinstance(implicit_term, WrapTerm) else implicit_term
+            residual_tags = _derive_residual_tags(
+                getattr(_inner, "tags", frozenset()), negate_J=True
+            )
+        else:
+            residual_tags = frozenset()
+
         #
         # We have a choice whether to evaluate `vf` to get vector field evaluations
         # ("values in f-space"), or to evaluate `vf_prod` to get (vector field)-control
@@ -936,7 +946,7 @@ class AbstractRungeKutta(AbstractAdaptiveSolver[_SolverState]):
                         options={},
                         f_struct=jax.eval_shape(lambda: f_pred),
                         aux_struct=None,
-                        tags=frozenset(),
+                        tags=residual_tags,
                     )
 
                 def eval_k_jac():
@@ -947,7 +957,7 @@ class AbstractRungeKutta(AbstractAdaptiveSolver[_SolverState]):
                         options={},
                         f_struct=jax.eval_shape(lambda: k_pred),
                         aux_struct=None,
-                        tags=frozenset(),
+                        tags=residual_tags,
                     )
 
                 if self.calculate_jacobian == CalculateJacobian.every_stage:
@@ -1105,7 +1115,7 @@ class AbstractRungeKutta(AbstractAdaptiveSolver[_SolverState]):
                     options={},
                     f_struct=jax.eval_shape(lambda: get_implicit(f0)),
                     aux_struct=None,
-                    tags=frozenset(),
+                    tags=residual_tags,
                 )
                 jac_k = _unused
             else:
@@ -1127,7 +1137,7 @@ class AbstractRungeKutta(AbstractAdaptiveSolver[_SolverState]):
                     options={},
                     f_struct=jax.eval_shape(lambda: y0),
                     aux_struct=None,
-                    tags=frozenset(),
+                    tags=residual_tags,
                 )
         dyn_jac_f, static_jac_f = eqx.partition(jac_f, eqx.is_array)
         dyn_jac_k, static_jac_k = eqx.partition(jac_k, eqx.is_array)
