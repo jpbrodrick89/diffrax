@@ -82,7 +82,7 @@ class ImplicitEuler(AbstractImplicitSolver, AbstractAdaptiveSolver):
         # If we wanted FSAL then really the correct thing to do would just be to
         # write out a `ButcherTableau` and use `AbstractSDIRK`.
         _inner = terms.term if isinstance(terms, WrapTerm) else terms
-        y_struct = jax.eval_shape(lambda x: x, y0)
+        y_struct = jax.tree_util.tree_map(lambda x: jax.ShapeDtypeStruct(x.shape, x.dtype), y0)
         residual_tags = self._residual_tags(
             getattr(_inner, "tags", frozenset()), y_struct, negate_J=False
         )

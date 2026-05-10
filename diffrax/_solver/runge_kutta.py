@@ -536,7 +536,7 @@ class AbstractRungeKutta(AbstractAdaptiveSolver[_SolverState]):
         # to have implicit stages (e.g. custom multi-tableau solvers) fall back to frozenset().
         if implicit_term is not None and isinstance(self, AbstractImplicitSolver):
             _inner = implicit_term.term if isinstance(implicit_term, WrapTerm) else implicit_term
-            y_struct = jax.eval_shape(lambda x: x, y0)
+            y_struct = jtu.tree_map(lambda x: jax.ShapeDtypeStruct(x.shape, x.dtype), y0)
             residual_tags = self._residual_tags(
                 getattr(_inner, "tags", frozenset()), y_struct, negate_J=True
             )
