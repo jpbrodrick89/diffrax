@@ -11,9 +11,11 @@ from typing import (
 )
 
 import equinox as eqx
+import jax
 import jax.lax as lax
 import jax.numpy as jnp
 import jax.tree_util as jtu
+import lineax as lx
 import optimistix as optx
 
 
@@ -213,6 +215,43 @@ class AbstractImplicitSolver(AbstractSolver[_SolverState]):
 
     root_finder: AbstractVar[optx.AbstractRootFinder]
     root_find_max_steps: AbstractVar[int]
+
+    def _residual_tags(
+        self, jac_tags: frozenset, y_struct, *, negate_J: bool
+    ) -> frozenset:
+        """Derive residual Jacobian tags from ODE Jacobian tags via lineax composition.
+
+        Uses lineax operator arithmetic to propagate tags through the composition
+        structure, avoiding any manual tag-mapping logic.
+
+        negate_J=True  → DIRK: residual Jacobian ≈ I - c·J
+        negate_J=False → ImplicitEuler: residual Jacobian ≈ h·J - I
+
+        Scalar coefficients are omitted because equinox converts Python floats to JAX
+        arrays inside MulLinearOperator, making lineax's _scalar_sign return 'unknown'.
+        Tag inference only depends on sign/direction of the composition, not magnitude.
+        """
+        if not jac_tags:
+            return frozenset()
+        dummy_J = lx.FunctionLinearOperator(
+            lambda v: v, y_struct, tags=jac_tags, closure_convert=False
+        )
+        dummy_I = lx.IdentityLinearOperator(y_struct)
+        composed = dummy_I - dummy_J if negate_J else dummy_J - dummy_I
+        result: set[object] = set()
+        if lx.is_symmetric(composed):
+            result.add(lx.symmetric_tag)
+        if lx.is_positive_semidefinite(composed):
+            result.add(lx.positive_semidefinite_tag)
+        if lx.is_negative_semidefinite(composed):
+            result.add(lx.negative_semidefinite_tag)
+        if lx.is_diagonal(composed):
+            result.add(lx.diagonal_tag)
+        if lx.is_tridiagonal(composed):
+            result.add(lx.tridiagonal_tag)
+        if lx.has_unit_diagonal(composed):
+            result.add(lx.unit_diagonal_tag)
+        return frozenset(result)
 
 
 class AbstractItoSolver(AbstractSolver[_SolverState]):

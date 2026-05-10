@@ -6,7 +6,6 @@ import jax.core
 import jax.lax as lax
 import jax.numpy as jnp
 import jax.tree_util as jtu
-import lineax as lx
 import numpy as np
 import optimistix as optx
 from jaxtyping import Array, ArrayLike, PyTree, Shaped
@@ -185,37 +184,3 @@ def upcast_or_raise(
     elif config_value != "standard":
         assert False, f"Unrecognised `JAX_NUMPY_DTYPE_PROMOTION={config_value}`"
     return jnp.astype(x, promote_dtype)
-
-
-# Minimal shape used purely for tag inference — no array computation ever happens.
-_TAG_DUMMY_STRUCT = jax.ShapeDtypeStruct((1,), jnp.float64)
-
-
-def _derive_residual_tags(jac_tags: frozenset, *, negate_J: bool) -> frozenset:
-    """Derive residual Jacobian tags from ODE Jacobian tags via lineax composition.
-
-    Uses lineax operator arithmetic to propagate tags through the composition structure,
-    avoiding any manual tag-mapping logic.
-
-    negate_J=True  → DIRK: residual Jacobian ≈ I - c·J
-    negate_J=False → ImplicitEuler: residual Jacobian ≈ h·J - I
-
-    Scalar coefficients are omitted because equinox converts Python floats to JAX arrays
-    inside MulLinearOperator, making lineax's _scalar_sign return 'unknown'. Tag
-    inference only depends on the sign/direction of the composition, not the magnitude.
-    """
-    if not jac_tags:
-        return frozenset()
-    dummy_J = lx.FunctionLinearOperator(
-        lambda v: v, _TAG_DUMMY_STRUCT, tags=jac_tags, closure_convert=False
-    )
-    dummy_I = lx.IdentityLinearOperator(_TAG_DUMMY_STRUCT)
-    composed = dummy_I - dummy_J if negate_J else dummy_J - dummy_I
-    result: set[object] = set()
-    if lx.is_symmetric(composed):
-        result.add(lx.symmetric_tag)
-    if lx.is_positive_semidefinite(composed):
-        result.add(lx.positive_semidefinite_tag)
-    if lx.is_negative_semidefinite(composed):
-        result.add(lx.negative_semidefinite_tag)
-    return frozenset(result)

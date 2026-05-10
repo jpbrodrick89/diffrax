@@ -39,7 +39,6 @@ from .._custom_types import (
     VF,
     Y,
 )
-from .._misc import _derive_residual_tags
 from .._solution import is_okay, RESULTS, update_result
 from .._term import AbstractTerm, MultiTerm, ODETerm, WrapTerm
 from .base import AbstractAdaptiveSolver, AbstractImplicitSolver, vector_tree_dot
@@ -532,11 +531,14 @@ class AbstractRungeKutta(AbstractAdaptiveSolver[_SolverState]):
             tableaus
         )
 
-        # Derive residual Jacobian tags from ODETerm.tags (DIRK: residual = I - c·J)
-        if implicit_term is not None:
+        # Derive residual Jacobian tags from ODETerm.tags (DIRK: residual = I - c·J).
+        # Only applies to AbstractImplicitSolver subclasses; other RK solvers that happen
+        # to have implicit stages (e.g. custom multi-tableau solvers) fall back to frozenset().
+        if implicit_term is not None and isinstance(self, AbstractImplicitSolver):
             _inner = implicit_term.term if isinstance(implicit_term, WrapTerm) else implicit_term
-            residual_tags = _derive_residual_tags(
-                getattr(_inner, "tags", frozenset()), negate_J=True
+            y_struct = jax.eval_shape(lambda x: x, y0)
+            residual_tags = self._residual_tags(
+                getattr(_inner, "tags", frozenset()), y_struct, negate_J=True
             )
         else:
             residual_tags = frozenset()
