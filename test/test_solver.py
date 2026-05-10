@@ -563,6 +563,28 @@ _y_struct = jax.ShapeDtypeStruct((5,), jnp.float64)
         # tridiagonal → preserved
         (frozenset({lx.tridiagonal_tag}), True, frozenset({lx.tridiagonal_tag})),
         (frozenset({lx.tridiagonal_tag}), False, frozenset({lx.tridiagonal_tag})),
+        # lower_triangular → preserved
+        (
+            frozenset({lx.lower_triangular_tag}),
+            True,
+            frozenset({lx.lower_triangular_tag}),
+        ),
+        (
+            frozenset({lx.lower_triangular_tag}),
+            False,
+            frozenset({lx.lower_triangular_tag}),
+        ),
+        # upper_triangular → preserved
+        (
+            frozenset({lx.upper_triangular_tag}),
+            True,
+            frozenset({lx.upper_triangular_tag}),
+        ),
+        (
+            frozenset({lx.upper_triangular_tag}),
+            False,
+            frozenset({lx.upper_triangular_tag}),
+        ),
         # empty → empty
         (frozenset(), True, frozenset()),
         (frozenset(), False, frozenset()),

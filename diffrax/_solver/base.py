@@ -251,6 +251,10 @@ class AbstractImplicitSolver(AbstractSolver[_SolverState]):
             result.add(lx.tridiagonal_tag)
         if lx.has_unit_diagonal(composed):
             result.add(lx.unit_diagonal_tag)
+        if lx.is_lower_triangular(composed):
+            result.add(lx.lower_triangular_tag)
+        if lx.is_upper_triangular(composed):
+            result.add(lx.upper_triangular_tag)
         return frozenset(result)
 
 
