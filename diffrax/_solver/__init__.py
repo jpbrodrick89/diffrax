@@ -54,4 +54,5 @@ from .srk import (
     AbstractSRK as AbstractSRK,
     StochasticButcherTableau as StochasticButcherTableau,
 )
+from .tr_bdf2 import TRBDF2 as TRBDF2
 from .tsit5 import Tsit5 as Tsit5

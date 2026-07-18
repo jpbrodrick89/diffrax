@@ -116,6 +116,7 @@ from ._solver import (
     SRA1 as SRA1,
     StochasticButcherTableau as StochasticButcherTableau,
     StratonovichMilstein as StratonovichMilstein,
+    TRBDF2 as TRBDF2,
     Tsit5 as Tsit5,
 )
 from ._step_size_controller import (

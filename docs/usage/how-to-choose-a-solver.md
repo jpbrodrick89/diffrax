@@ -24,6 +24,8 @@ If you are solving a neural differential equation, and training via discretise-t
 
 For stiff problems then try the [`diffrax.Kvaerno3`][], [`diffrax.Kvaerno4`][], [`diffrax.Kvaerno5`][] family of solvers. In addition you should almost always use an adaptive step size controller such as [`diffrax.PIDController`][].
 
+If each implicit solve is expensive (e.g. a large stiff system with an expensive Jacobian) and you don't need better than 2nd order accuracy, then [`diffrax.TRBDF2`][] is a cheaper L-stable alternative, requiring only 2 implicit solves per step rather than 3 or more.
+
 See also the [Stiff ODE example](../examples/stiff_ode.ipynb).
 
 !!! danger
